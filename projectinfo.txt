@@ -1,0 +1,415 @@
+CHITRA KOLAM - Project Information
+
+1. Project Overview
+
+Chitra Kolam is a full-stack web platform for traditional Indian floor art, especially Kolam and Rangoli. The application combines a React frontend, an Express backend, PostgreSQL persistence, and separate Python / notebook-based AI components for generation, image enhancement, analysis, and cultural classification.
+
+The implemented product is not a blockchain or NFT marketplace. Those ideas appear in the draft description, but they are not present in the source code. The actual system focuses on creation, analysis, learning, exploration, community-style browsing, and profile-style showcase pages.
+
+2. What the Project Does
+
+The project supports these major user experiences:
+
+- User authentication with JWT login and registration.
+- Kolam generation from text prompts, with session history.
+- Canvas/sketch-based Kolam refinement through an AI backend.
+- Upload-based Kolam analysis with scoring, metrics, and PDF export.
+- Explore and tutorial pages with curated Kolam/Rangoli content.
+- Community-style feed with posts, likes, saves, and local draft posting.
+- Profile and monetization showcase pages with artwork galleries.
+- Static mini-games for learning and engagement.
+
+3. Frontend Architecture
+
+The frontend is a React 19 single-page application built with Vite and Tailwind CSS 4.
+
+Main entry points:
+
+- [client/src/main.jsx](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/client/src/main.jsx)
+- [client/src/App.jsx](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/client/src/App.jsx)
+
+Routing is handled with React Router. The app defines routes for:
+
+- `/` landing page
+- `/login`
+- `/register`
+- `/canvas`
+- `/tutorial`
+- `/explore`
+- `/analyze`
+- `/generate-kolam`
+- `/community`
+- `/profile`
+
+Protected routes use a token validation flow through `PrivateRoute`.
+
+4. Frontend Tech Stack
+
+- React 19
+- React Router DOM 7
+- Vite 7
+- Tailwind CSS 4
+- axios
+- framer-motion
+- lucide-react
+- react-icons
+- html2canvas
+- jspdf
+- OGL
+- static HTML pages in `client/public/games`
+
+5. Main Frontend Pages
+
+Landing page:
+
+- Uses hero, mission, tutorial, analysis, and creation sections.
+- Built from reusable presentation components.
+- Main purpose is to introduce the platform and route users into generation, analysis, and tutorials.
+
+Generate Kolam page:
+
+- Implements a chat-like generation workflow.
+- Users enter a prompt.
+- The first prompt creates a generation session.
+- Later prompts attach to the same session and the session history is shown in a sidebar.
+
+Canvas page:
+
+- Provides a freehand drawing surface with grid options, brush sizing, opacity, zoom, and tool controls.
+- The canvas can be exported and uploaded to the backend for AI enhancement.
+
+Analyse page:
+
+- Uploads a Kolam/Rangoli image.
+- Waits for analysis output from the backend.
+- Displays final score, metric cards, visualization thumbnails, and PDF download.
+
+Explore page:
+
+- Shows curated content, stories, regional art, gallery-style cards, and a story uploader.
+
+Tutorial page:
+
+- Presents educational content and links to mini-games.
+
+Community page:
+
+- Simulates a social feed with tabs, likes, saves, comments, and a new-post modal.
+- Data is mostly local/client-side.
+
+Profile page:
+
+- Shows artwork library, monetized designs, and copyright-related showcase sections.
+
+6. Frontend Design Style
+
+The UI is component-driven and visually rich, but it is not organized around a formal token system or design system package. Styling is mostly done with Tailwind utility classes, with only minimal global CSS helpers in [client/src/index.css](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/client/src/index.css).
+
+Notable UI traits:
+
+- Large hero and content sections.
+- Card-based layouts.
+- Sticky navbar.
+- Mobile-friendly responsive menus.
+- Mixed use of gradients, shadows, and rounded cards.
+- Heavy reliance on asset images for atmosphere.
+
+7. Backend Architecture
+
+The backend is an Express 5 API server.
+
+Main entry point:
+
+- [server/Server.js](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/server/Server.js)
+
+The server enables:
+
+- JWT authentication.
+- Prompt/session/image persistence.
+- Remote AI generation requests.
+- Canvas image enhancement requests.
+- Image analysis forwarding.
+- Static file serving from the `uploads` directory.
+
+8. Backend Tech Stack
+
+- Node.js
+- Express 5
+- PostgreSQL
+- bcrypt
+- jsonwebtoken
+- multer
+- cors
+- axios
+- dotenv
+- uuid
+- node-fetch
+- cloudinary utilities
+
+9. API Routes
+
+Auth:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/validate-token`
+
+Generation:
+
+- `POST /api/text_to_image/generate`
+- `POST /api/text_to_image/session`
+- `GET /api/text_to_image/sessions`
+- `GET /api/text_to_image/session/:id`
+
+Canvas:
+
+- `POST /api/canvas/upload-image`
+
+Analysis:
+
+- `POST /api/analyse/upload`
+
+10. Backend Data Model
+
+Database schema is defined in:
+
+- [server/src/config/database.sql](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/server/src/config/database.sql)
+
+Tables:
+
+- `users`
+- `sessions`
+- `prompts`
+- `generated_images`
+- `favorites`
+
+Relationships:
+
+- A user has many sessions.
+- A session has many prompts.
+- A prompt has many generated images.
+- Favorites connect users to generated images.
+
+This structure makes the prompt/image generation flow history-aware instead of stateless.
+
+11. Authentication Flow
+
+Registration:
+
+- Frontend submits username, email, and password.
+- Backend checks for duplicates.
+- Password is hashed with bcrypt.
+- User row is created in PostgreSQL.
+
+Login:
+
+- Frontend submits email and password.
+- Backend verifies password hash.
+- `last_login` is updated.
+- JWT token is returned.
+
+Authorization:
+
+- The frontend stores the JWT in `localStorage`.
+- Protected requests attach `Authorization: Bearer <token>`.
+- `PrivateRoute` validates the token before rendering secured pages.
+
+12. Text-to-Image Generation Flow
+
+Implemented flow:
+
+- User enters a prompt in the Generate Kolam page.
+- If needed, a new session is created.
+- The prompt is sent to the backend.
+- The backend stores the prompt in PostgreSQL.
+- The backend calls a remote ngrok-hosted ML service.
+- The returned base64 image is written to `uploads/generated`.
+- The image URL is stored in PostgreSQL and returned to the frontend.
+
+Important implementation note:
+
+- The server expects the ML response field `base64` in one controller.
+- The local Flask app in [ml/app.py](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/ml/app.py) returns `image_base64` instead.
+- That means the repo currently contains a wiring mismatch and is not fully aligned end to end.
+
+13. Canvas-to-Image Enhancement Flow
+
+The Canvas page allows a user to draw or upload an image, then send it to the backend.
+
+Flow:
+
+- The canvas is rasterized into a PNG blob.
+- The blob is posted as multipart form data.
+- The backend forwards the image to another remote ngrok ML service.
+- The response is converted from base64 to an image file.
+- The resulting image URL is returned to the frontend.
+
+This looks like a sketch refinement or control-guided generation flow rather than pure text-to-image.
+
+14. Analysis Flow
+
+The analysis feature is designed to score a Kolam/Rangoli image using computer vision.
+
+Frontend flow:
+
+- User uploads an image.
+- The file is sent to the backend with a JWT token.
+- The response is rendered in a rich analysis report component.
+- The report can be exported to PDF.
+
+Backend flow:
+
+- The Express route receives the file through Multer.
+- It forwards the file to a Flask endpoint at `http://127.0.0.1:5000/analyze`.
+- The Flask response is returned to the frontend.
+
+Important mismatch:
+
+- The local Python file [ml/app.py](/home/vedant/Vedant/Codingg/Projects/ChitraKolam/ml/app.py) exposes `/generate`, not `/analyze`.
+- So the analysis path in the repo is also not fully wired to the local Flask file as written.
+
+15. ML / Python Components
+
+ml/app.py:
+
+- Flask API for SDXL-based generation.
+- CPU-oriented inference path.
+- Loads Stable Diffusion XL base model and optional LoRA.
+- Returns a base64 PNG.
+
+ml/generate.py:
+
+- Older GPU-oriented SDXL generation script.
+- Uses `StableDiffusionXLPipeline` and LoRA attn processor loading.
+- Saves generated images to disk.
+
+ml/test.py:
+
+- Simple CUDA availability check script.
+
+ml/requirements.txt:
+
+- Flask
+- flask-cors
+- torch
+- diffusers
+- transformers
+- accelerate
+- safetensors
+- xformers
+
+16. Notebook: SD.ipynb
+
+The SD notebook is a sketch-controlled SDXL generation pipeline.
+
+What it does:
+
+- Loads a Canny edge map from a sketch or image.
+- Uses ControlNet with SDXL.
+- Loads LoRA weights for Kolam style refinement.
+- Runs generation on CUDA.
+
+Core concepts used:
+
+- `StableDiffusionXLControlNetPipeline`
+- `ControlNetModel`
+- `AutoencoderKL`
+- Canny preprocessing
+- LoRA fine-tuning
+
+This notebook is the clearest evidence that the project supports sketch-guided or structure-preserving generation, not just plain text generation.
+
+17. Notebook: FinalopenCV.ipynb
+
+This notebook is the computer vision analysis engine.
+
+It contains functions for:
+
+- image loading and resizing
+- detecting dots
+- detecting boundaries
+- finding a precise center
+- analyzing symmetry
+- analyzing dot-grid quality
+- analyzing complexity
+- analyzing cleanliness and precision
+- analyzing color harmony
+- calculating the final grade
+
+It also generates detailed feedback and visual outputs.
+
+Important implication:
+
+- This notebook is not just a toy example.
+- It is the scoring logic behind the analysis feature.
+
+18. Notebook: RAG.ipynb
+
+This notebook is a RAG-style recognition/classification pipeline built on CLIP and FAISS.
+
+What it does:
+
+- Loads a dataset of regional floor-art categories.
+- Embeds text prompts and images with CLIP.
+- Builds a FAISS similarity index.
+- Classifies an uploaded image into a category.
+- Optionally enriches output with an LLM layer.
+
+It recognizes six broad styles:
+
+- Mandana
+- Alpana
+- Sathiya/Gahuli
+- Rangoli
+- Muggu
+- Kolam
+
+The notebook can also produce structured cultural metadata, story text, and semantic labels.
+
+19. Content and Assets
+
+The app uses a large number of static images and asset folders for regional examples and product screenshots. Many pages are showcase-oriented and depend heavily on these local assets rather than backend content.
+
+There are also public game pages under:
+
+- `client/public/games/color.html`
+- `client/public/games/drawkolam.html`
+- `client/public/games/puzzle.html`
+
+20. What Is Implemented vs What Is Only Suggested
+
+Implemented:
+
+- Authentication
+- Prompt generation workflow
+- Session history storage
+- Canvas upload flow
+- Analysis UI and CV notebook logic
+- Explore/tutorial/community/profile UI
+- Static games
+
+Not implemented in code:
+
+- Blockchain ownership
+- NFT marketplace
+- Smart contracts
+- On-chain provenance
+- Live social backend for community/profile/monetization features
+
+21. Key Codebase Facts
+
+- The project is split into `client/`, `server/`, `ml/`, and `ipynb models/`.
+- The frontend talks to the backend on `http://localhost:5000` in several places.
+- The generation backend forwards work to remote ngrok services.
+- The notebook files contain most of the actual ML logic.
+- Some files are present but not wired into the main router, such as the monetization page and main layout.
+
+22. Overall Summary
+
+Chitra Kolam is best understood as a cultural-art creation and learning platform with three technical pillars:
+
+- a React/Express web app for user interaction,
+- a Stable Diffusion / ControlNet / LoRA generation stack for image creation,
+- a computer-vision and retrieval-based analysis/classification stack for interpretation and scoring.
+
+The codebase shows a strong product direction, but also a few integration gaps between frontend, backend, and Python services that would need cleanup before the system is fully production-ready.
